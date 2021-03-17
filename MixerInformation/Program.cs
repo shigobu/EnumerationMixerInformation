@@ -23,14 +23,39 @@ namespace MixerInformation
                 //master情報
                 Console.WriteLine("FriendlyName:" + device.FriendlyName);
                 Console.WriteLine("DeviceFriendlyName:" + device.DeviceFriendlyName);
-                Console.WriteLine("IconPath:" + Environment.ExpandEnvironmentVariables(device.IconPath));
+                Console.WriteLine("IconPathRaw:" + Environment.ExpandEnvironmentVariables(device.IconPath));
+
+                //アイコンパス文字列の取得
+                string[] iconPathSplited = device.IconPath.Split(',');
+                if (iconPathSplited.Length >= 2)
+                {
+                    string expandPath = Environment.ExpandEnvironmentVariables(iconPathSplited.First());
+                    int IDraw = int.Parse(iconPathSplited.Last());
+                    uint ID = (uint)Math.Abs(IDraw);
+                    Console.WriteLine("IconPath:" + GetStringFromDll(expandPath, ID));
+                    int err = Marshal.GetLastWin32Error();
+                }
+
                 Console.WriteLine("");
 
                 AudioSessionManager sessionManager = device.AudioSessionManager;
                 var sessions = sessionManager.Sessions;
                 for (int j = 0; j < sessions.Count; j++)
                 {
-                    Console.WriteLine("DisplayName:" + sessions[j].DisplayName);
+                    if (sessions[j].DisplayName.First() == '@')
+                    {
+                        string[] displayNameSplited = sessions[j].DisplayName.Split(',');
+                        string expandPath = Environment.ExpandEnvironmentVariables(displayNameSplited.First().Substring(1));
+                        int IDraw = int.Parse(displayNameSplited.Last());
+                        uint ID = (uint)Math.Abs(IDraw);
+                        Console.WriteLine("DisplayName:" + GetStringFromDll(expandPath, ID));
+                        int err = Marshal.GetLastWin32Error();
+                    }
+                    else
+                    {
+                        Console.WriteLine("DisplayName:" + sessions[j].DisplayName);
+                    }
+
                     Console.WriteLine("IconPath:" + sessions[j].IconPath);
                     Console.WriteLine("");
                 }
@@ -45,6 +70,23 @@ namespace MixerInformation
 
             Console.Read();
 
+        }
+
+        /// <summary>
+        /// DLLとリソースIDから、文字列を取得します。
+        /// </summary>
+        /// <param name="dllName"></param>
+        /// <param name="ID"></param>
+        /// <returns></returns>
+        static string GetStringFromDll(string dllName, uint ID)
+        {
+            string temp = System.IO.Path.GetFileName(dllName);
+            using(NativeLibraryOperation nativeLibrary = new NativeLibraryOperation(dllName))
+            {
+                StringBuilder stringBuilder = new StringBuilder(1024);
+                int err = NativeMethods.LoadString(nativeLibrary.ModuleHandle, ID, stringBuilder, stringBuilder.Capacity);
+                return stringBuilder.ToString();
+            }
         }
     }
 
@@ -61,16 +103,19 @@ namespace MixerInformation
         /// <summary>
         /// ライブラリハンドル
         /// </summary>
-        private IntPtr ModuleHandle { get; }
+        public IntPtr ModuleHandle { get; }
 
         /// <summary>
         /// 指定のライブラリをロードし、インスタンスの初期化を行います。
         /// </summary>
         /// <param name="libraryName"></param>
-        NativeLibraryOperation(string libraryName)
+        public NativeLibraryOperation(string libraryName)
         {
             LibraryName = libraryName;
-            ModuleHandle = NativeMethods.LoadLibrary(libraryName);
+            ModuleHandle = NativeMethods.LoadLibraryEx(libraryName.ToLower(), IntPtr.Zero, NativeMethods.LoadLibraryExFlags.DONT_RESOLVE_DLL_REFERENCES | NativeMethods.LoadLibraryExFlags.LOAD_LIBRARY_AS_DATAFILE);
+
+            int err = Marshal.GetLastWin32Error();
+
         }
 
         #region IDisposable Support
@@ -114,14 +159,20 @@ namespace MixerInformation
 
     class NativeMethods
     {
+        [Flags]
+        public enum LoadLibraryExFlags : UInt32
+        {
+            DONT_RESOLVE_DLL_REFERENCES = 0x0000001,
+            LOAD_LIBRARY_AS_DATAFILE = 0x00000002
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hFile, LoadLibraryExFlags dwFlags);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool FreeLibrary(IntPtr hModule);
 
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern IntPtr LoadLibrary(string lpFileName);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern int LoadString(IntPtr hInstance, uint uID, StringBuilder lpBuffer, int nBufferMax);
     }
 }
