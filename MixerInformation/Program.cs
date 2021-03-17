@@ -48,6 +48,70 @@ namespace MixerInformation
         }
     }
 
+    /// <summary>
+    /// ライブラリを読み込み、開放する方法を提供します。
+    /// </summary>
+    class NativeLibraryOperation : IDisposable
+    {
+        /// <summary>
+        /// ライブラリ名
+        /// </summary>
+        private string LibraryName { get; }
+
+        /// <summary>
+        /// ライブラリハンドル
+        /// </summary>
+        private IntPtr HModule { get; }
+
+        /// <summary>
+        /// 指定のライブラリをロードし、インスタンスの初期化を行います。
+        /// </summary>
+        /// <param name="libraryName"></param>
+        NativeLibraryOperation(string libraryName)
+        {
+            LibraryName = libraryName;
+            HModule = NativeMethods.LoadLibrary(libraryName);
+        }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // 重複する呼び出しを検出するには
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: マネージド状態を破棄します (マネージド オブジェクト)。
+                }
+
+                // TODO: アンマネージド リソース (アンマネージド オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
+                // TODO: 大きなフィールドを null に設定します。
+
+                NativeMethods.FreeLibrary(HModule);
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: 上の Dispose(bool disposing) にアンマネージド リソースを解放するコードが含まれる場合にのみ、ファイナライザーをオーバーライドします。
+        ~NativeLibraryOperation()
+        {
+            // このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+            Dispose(false);
+        }
+
+        // このコードは、破棄可能なパターンを正しく実装できるように追加されました。
+        public void Dispose()
+        {
+            // このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+            Dispose(true);
+            // TODO: 上のファイナライザーがオーバーライドされる場合は、次の行のコメントを解除してください。
+            GC.SuppressFinalize(this);
+        }
+        #endregion
+    }
+
     class NativeMethods
     {
 
@@ -55,9 +119,9 @@ namespace MixerInformation
         public static extern bool FreeLibrary(IntPtr hModule);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern IntPtr LoadLibrary(string lpFileName);
+        public static extern IntPtr LoadLibrary(string lpFileName);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern int LoadString(IntPtr hInstance, uint uID, StringBuilder lpBuffer, int nBufferMax);
+        public static extern int LoadString(IntPtr hInstance, uint uID, StringBuilder lpBuffer, int nBufferMax);
     }
 }
