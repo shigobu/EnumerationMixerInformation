@@ -61,7 +61,7 @@ namespace MixerInformation
         /// <summary>
         /// ライブラリハンドル
         /// </summary>
-        private IntPtr HModule { get; }
+        private IntPtr ModuleHandle { get; }
 
         /// <summary>
         /// 指定のライブラリをロードし、インスタンスの初期化を行います。
@@ -70,7 +70,7 @@ namespace MixerInformation
         NativeLibraryOperation(string libraryName)
         {
             LibraryName = libraryName;
-            HModule = NativeMethods.LoadLibrary(libraryName);
+            ModuleHandle = NativeMethods.LoadLibrary(libraryName);
         }
 
         #region IDisposable Support
@@ -88,7 +88,7 @@ namespace MixerInformation
                 // TODO: アンマネージド リソース (アンマネージド オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
                 // TODO: 大きなフィールドを null に設定します。
 
-                NativeMethods.FreeLibrary(HModule);
+                NativeMethods.FreeLibrary(ModuleHandle);
 
                 disposedValue = true;
             }
