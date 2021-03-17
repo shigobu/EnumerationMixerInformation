@@ -42,6 +42,11 @@ namespace MixerInformation
                 var sessions = sessionManager.Sessions;
                 for (int j = 0; j < sessions.Count; j++)
                 {
+                    if (string.IsNullOrEmpty(sessions[j].DisplayName))
+                    {
+                        AudioSessionControl aaa = sessions[j];
+                        continue;
+                    }
                     if (sessions[j].DisplayName.First() == '@')
                     {
                         string[] displayNameSplited = sessions[j].DisplayName.Split(',');
